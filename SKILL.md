@@ -4,7 +4,7 @@ description: "将产品原型转换为详细技术规范的技能。当产品经
 version: "2.0.0"
 ---
 
-# 别整乱原型分析技能 (bie-zheng-luan-prototype)
+# 别整乱七八糟原型分析技能 (bie-zheng-luan-prototype)
 
 本技能将产品原型转换为详细的技术实现规范文档，帮助开发团队（尤其是大模型）准确理解需求并生成高相似度的系统。
 
