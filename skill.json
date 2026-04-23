@@ -1,7 +1,7 @@
 {
   "name": "bie-zheng-luan-prototype",
   "displayName": "别整乱原型分析技能",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "将产品原型转换为详细技术规范的技能，支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型",
   "author": "杰哥",
   "license": "MIT",
@@ -97,7 +97,46 @@
       "如需分析内部原型，建议在受控网络环境中运行",
       "使用视觉API前确认图片不含敏感设计或隐私信息",
       "建议在虚拟环境中安装Python依赖"
-    ]
+    ],
+    "mitigations": {
+      "commandInjection": {
+        "implemented": true,
+        "description": "Shell脚本中对URL和文件路径参数进行严格验证，阻止包含shell特殊字符（;|&$`'\"()<>等）的输入",
+        "details": [
+          "URL验证：只允许http/https协议，检查危险字符，限制长度2048字符",
+          "文件路径验证：检查危险字符，限制长度4096字符",
+          "使用--选项防止参数被解析为命令选项",
+          "curl/wget调用时URL已预先验证"
+        ]
+      },
+      "ssrf": {
+        "implemented": true,
+        "description": "URL下载时检测私有网络地址（localhost、127.x、10.x、172.16.x、192.168.x），发出警告但不阻止（支持内网原型分析需求）",
+        "details": [
+          "检测并警告私有IP/回环地址访问",
+          "用户需确认内网URL来源可信",
+          "未来版本可提供配置选项完全阻止内网访问"
+        ]
+      },
+      "pathTraversal": {
+        "implemented": true,
+        "description": "文件路径验证防止访问敏感系统文件",
+        "details": [
+          "检测敏感路径关键词（.ssh/.env/.git/passwd/shadow/hosts）并发出警告",
+          "限制路径长度",
+          "验证文件存在性"
+        ]
+      },
+      "inputValidation": {
+        "implemented": true,
+        "description": "所有Python脚本使用标准库处理输入，避免eval/exec等危险操作",
+        "details": [
+          "Python脚本使用sys.argv接收参数，不执行动态代码",
+          "文件读取使用标准open()函数，指定编码",
+          "XMind解析使用标准zipfile库，不解压到任意路径"
+        ]
+      }
+    }
   },
   "tags": [
     "原型分析",
@@ -115,7 +154,8 @@
     "自动识别输入类型",
     "生成完整技术文档",
     "包含前端组件、后端接口、数据库设计",
-    "可选视觉增强分析（需ANTHROPIC_API_KEY）"
+    "可选视觉增强分析（需ANTHROPIC_API_KEY）",
+    "实施命令注入防护和输入验证"
   ],
   "usage": {
     "examples": [

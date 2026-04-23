@@ -90,15 +90,60 @@ check_dependencies() {
     fi
 }
 
-# 下载网页内容
+# 验证URL安全性
+validate_url() {
+    local url="$1"
+
+    # 检查URL格式：只允许http和https协议
+    if [[ ! "$url" =~ ^https?:// ]]; then
+        log_error "无效URL: 仅允许http和https协议"
+        return 1
+    fi
+
+    # 检查URL中是否包含危险字符（命令注入防护）
+    # 阻止: ; | & $ ` ' " ( ) < > \n \r 等shell特殊字符
+    if [[ "$url" =~ [;\|&\$\`\'\"()<>] ]] || [[ "$url" =~ [\n\r] ]]; then
+        log_error "URL包含潜在危险字符，拒绝执行"
+        return 1
+    fi
+
+    # 检查URL长度（防止过长URL攻击）
+    if [[ ${#url} -gt 2048 ]]; then
+        log_error "URL过长（超过2048字符），拒绝执行"
+        return 1
+    fi
+
+    # 获取域名并验证
+    local domain=$(echo "$url" | sed -n 's|^https?://[^/]*||p' | cut -d'/' -f1 | cut -d':' -f1)
+
+    # 阻止访问本地回环地址和私有IP（可选，根据需求启用）
+    # 注意：如果需要支持内网原型，可以注释掉以下检查
+    if [[ "$domain" =~ ^(localhost|127\.|0\.0\.0\.0|::1|10\.|172\.16|192\.168|169\.254) ]]; then
+        log_warn "警告: URL指向私有网络地址或本地主机"
+        log_warn "如果是预期的内网原型，请确保URL来源可信"
+        # 不阻止，但发出警告（允许内网访问）
+    fi
+
+    log_info "URL验证通过: $url"
+    return 0
+}
+
+# 下载网页内容（安全版本）
 download_page() {
     local url="$1"
     local output_file="$2"
-    
+
+    # 验证URL
+    if ! validate_url "$url"; then
+        return 1
+    fi
+
     log_info "下载网页内容: $url"
-    
+
     if [ "$NO_CACHE" = true ] || [ ! -f "$output_file" ]; then
-        if $DOWNLOADER "$url" > "$output_file"; then
+        # 使用--选项防止URL被解析为选项
+        # 使用引号保护参数，但URL已在validate_url中验证
+        if $DOWNLOADER -- "$url" > "$output_file" 2>/dev/null; then
             log_info "网页内容已保存到: $output_file"
             return 0
         else
@@ -220,6 +265,31 @@ generate_spec() {
     fi
 }
 
+# 验证本地文件路径安全性
+validate_local_file() {
+    local filepath="$1"
+
+    # 检查路径是否包含危险字符（命令注入防护）
+    if [[ "$filepath" =~ [;\|&\$\`\'\"()<>] ]] || [[ "$filepath" =~ [\n\r] ]]; then
+        log_error "文件路径包含潜在危险字符，拒绝执行"
+        return 1
+    fi
+
+    # 检查路径长度
+    if [[ ${#filepath} -gt 4096 ]]; then
+        log_error "文件路径过长，拒绝执行"
+        return 1
+    fi
+
+    # 检查文件是否存在
+    if [ ! -f "$filepath" ]; then
+        log_error "文件不存在: $filepath"
+        return 1
+    fi
+
+    return 0
+}
+
 # 主函数
 main() {
     # 默认参数
@@ -227,7 +297,7 @@ main() {
     FORMAT="markdown"
     VERBOSE=false
     NO_CACHE=false
-    
+
     # 解析参数
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -262,21 +332,32 @@ main() {
                 ;;
         esac
     done
-    
+
+    # 验证输出文件路径安全性
+    if [[ "$OUTPUT_FILE" =~ [;\|&\$\`\'\"()<>] ]] || [[ "$OUTPUT_FILE" =~ [\n\r] ]]; then
+        log_error "输出文件路径包含危险字符，拒绝执行"
+        exit 1
+    fi
+
     # 检查URL参数
     if [ -z "$URL" ]; then
         log_error "请提供要分析的URL"
         show_help
         exit 1
     fi
-    
+
     # 判断输入类型：URL还是本地文件
     if [[ "$URL" =~ ^https?:// ]]; then
         INPUT_TYPE="url"
         log_info "输入类型: URL原型"
+        # URL验证将在download_page中执行
     elif [ -f "$URL" ]; then
         INPUT_TYPE="local"
         log_info "输入类型: 本地HTML文件"
+        # 验证本地文件路径
+        if ! validate_local_file "$URL"; then
+            exit 1
+        fi
     else
         log_error "输入无效：既不是有效的URL，也不是存在的文件路径"
         log_error "URL需以http://或https://开头"
