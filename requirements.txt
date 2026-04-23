@@ -1,0 +1,15 @@
+# bie-zheng-luan-prototype 技能依赖
+
+# 核心依赖
+beautifulsoup4>=4.12.0  # HTML解析
+Pillow>=10.0.0          # 图片处理
+
+# 可选依赖（用于增强功能）
+# anthropic>=0.25.0     # Claude Vision API（图片原型增强分析）
+# opencv-python>=4.8.0  # 图像处理（高级图片分析）
+# lxml>=4.9.0          # XML解析（XMind文件解析备用）
+
+# 开发依赖
+# pytest>=7.0.0        # 测试框架
+# black>=23.0.0        # 代码格式化
+# flake8>=6.0.0        # 代码检查

@@ -1,0 +1,80 @@
+{
+  "name": "bie-zheng-luan-prototype",
+  "displayName": "别整乱原型分析技能",
+  "version": "2.0.0",
+  "description": "将产品原型转换为详细技术规范的技能，支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型",
+  "author": "杰哥",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jermyn-zmj/bie-zheng-luan-prototype"
+  },
+  "homepage": "https://clawhub.ai/skills/bie-zheng-luan-prototype",
+  "keywords": [
+    "prototype",
+    "analysis",
+    "html",
+    "xmind",
+    "design",
+    "figma",
+    "technical-spec",
+    "frontend",
+    "backend",
+    "database"
+  ],
+  "categories": [
+    "development",
+    "design",
+    "productivity",
+    "automation"
+  ],
+  "requirements": [
+    "python3",
+    "beautifulsoup4",
+    "pillow"
+  ],
+  "compatibility": {
+    "openclaw": ">=1.0.0"
+  },
+  "tags": [
+    "原型分析",
+    "技术规范",
+    "产品设计",
+    "前端开发",
+    "后端开发",
+    "数据库设计"
+  ],
+  "features": [
+    "支持URL原型分析（Figma/墨刀/Axure等）",
+    "支持本地HTML文件解析",
+    "支持图片原型分析（PNG/JPG/WebP等）",
+    "支持XMind文件解析",
+    "自动识别输入类型",
+    "生成完整技术文档",
+    "包含前端组件、后端接口、数据库设计"
+  ],
+  "usage": {
+    "examples": [
+      "分析这个Figma原型：https://www.figma.com/file/xxx",
+      "分析这个HTML原型文件：/path/to/prototype.html",
+      "分析这张设计稿截图：/path/to/design.png",
+      "分析这个产品脑图：/path/to/product.xmind"
+    ]
+  },
+  "output": {
+    "format": "markdown",
+    "sections": [
+      "系统概览",
+      "页面结构分析",
+      "前端实现方案",
+      "后端实现方案",
+      "数据库设计",
+      "开发注意事项"
+    ]
+  },
+  "created": "2026-04-22",
+  "updated": "2026-04-22",
+  "maintainers": [
+    "杰哥"
+  ]
+}
