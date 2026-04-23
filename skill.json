@@ -1,7 +1,7 @@
 {
   "name": "bie-zheng-luan-prototype",
   "displayName": "别整乱原型分析技能",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "将产品原型转换为详细技术规范的技能，支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型",
   "author": "杰哥",
   "license": "MIT",
@@ -34,18 +34,23 @@
       "beautifulsoup4",
       "pillow"
     ],
+    "tools": [
+      "curl 或 wget（用于URL下载）"
+    ],
     "optional": [
       {
         "name": "anthropic",
         "description": "Claude Vision API客户端，用于图片原型的精确UI识别（增强分析模式）",
-        "useCase": "图片原型视觉增强分析"
+        "useCase": "图片原型视觉增强分析",
+        "envRequired": "ANTHROPIC_API_KEY"
       },
       {
         "name": "opencv-python",
         "description": "图像处理库，用于高级图片分析",
         "useCase": "高级图像处理"
       }
-    ]
+    ],
+    "installNote": "Shell脚本不会自动安装依赖。请在运行前手动安装: pip install beautifulsoup4 pillow lxml"
   },
   "compatibility": {
     "openclaw": ">=1.0.0"
@@ -55,23 +60,27 @@
     "optional": [
       {
         "name": "ANTHROPIC_API_KEY",
-        "description": "Anthropic Claude API密钥，用于图片原型的视觉增强分析。如果不设置，将使用基础图像分析（颜色提取、布局推断）而非精确UI识别。",
+        "description": "Anthropic Claude API密钥，用于图片原型的视觉增强分析。设置此变量会启用外部API调用，将图片数据发送到Anthropic服务器。如果不设置，将使用本地基础图像分析（颜色提取、布局推断），不传输数据。",
         "required": false,
-        "sensitive": true
+        "sensitive": true,
+        "dataTransmission": "启用此变量后，图片数据将通过base64编码发送到Anthropic Claude API（外部服务）"
       }
     ]
   },
   "permissions": {
     "network": {
       "required": true,
-      "description": "需要网络访问来下载URL原型内容（Figma/墨刀/Axure等公开链接）。",
-      "allowIntranet": true,
-      "warning": "支持内网URL分析。请勿提供不应被访问的内部系统链接，可能存在SSRF风险。"
+      "description": "需要网络访问来下载公开URL的原型内容。",
+      "allowIntranet": false,
+      "intranetRequiresConfirmation": true,
+      "warning": "内网URL默认被阻止。如需分析内部原型，需使用 --allow-internal 参数确认SSRF风险。",
+      "internalUrlHandling": "检测内网/私有IP地址，默认拒绝访问，需用户通过命令行参数明确确认"
     },
     "filesystem": {
       "required": true,
       "description": "需要读取本地文件（HTML文件、图片文件、XMind文件）。",
-      "operations": ["read"]
+      "operations": ["read"],
+      "writeOperations": "仅写入用户指定的输出文件，不修改系统文件"
     },
     "externalServices": {
       "required": false,
@@ -80,61 +89,50 @@
           "name": "Anthropic Claude Vision API",
           "description": "用于图片原型的精确UI元素识别（可选增强功能）。",
           "dataTransmitted": "图片二进制数据（base64编码）",
-          "warning": "启用此功能会将本地设计图片发送到Anthropic服务器。请确保图片不包含敏感信息或知识产权内容。",
-          "trigger": "用户主动请求视觉增强分析时"
+          "warning": "启用此功能会将本地设计图片发送到Anthropic服务器。请确保图片不包含敏感信息。",
+          "trigger": "用户设置ANTHROPIC_API_KEY环境变量后，通过代码调用启用",
+          "default": "默认禁用（未设置环境变量时不调用外部API）"
         }
       ]
     }
   },
   "security": {
     "warnings": [
-      "支持内网URL分析，请勿提供不应被访问的内部系统链接（SSRF风险）",
-      "使用视觉增强分析会将图片数据发送到外部API服务（数据泄露风险）",
-      "请在隔离环境中首次测试，确认脚本行为符合预期"
+      "内网URL默认被阻止，需使用 --allow-internal 参数确认风险后才能访问",
+      "设置ANTHROPIC_API_KEY会启用外部API调用，图片数据将发送到Anthropic服务器",
+      "Shell脚本不会自动安装依赖，需手动pip install"
     ],
     "recommendations": [
-      "首次使用前检查scripts/目录下的Python脚本内容",
-      "如需分析内部原型，建议在受控网络环境中运行",
-      "使用视觉API前确认图片不含敏感设计或隐私信息",
-      "建议在虚拟环境中安装Python依赖"
+      "首次使用前在虚拟环境中安装依赖: pip install beautifulsoup4 pillow lxml",
+      "分析内网原型时，确认URL指向预期的内部资源",
+      "使用视觉API前确认图片不含敏感内容",
+      "建议在隔离环境中首次测试"
     ],
     "mitigations": {
       "commandInjection": {
         "implemented": true,
-        "description": "Shell脚本中对URL和文件路径参数进行严格验证，阻止包含shell特殊字符（;|&$`'\"()<>等）的输入",
-        "details": [
-          "URL验证：只允许http/https协议，检查危险字符，限制长度2048字符",
-          "文件路径验证：检查危险字符，限制长度4096字符",
-          "使用--选项防止参数被解析为命令选项",
-          "curl/wget调用时URL已预先验证"
-        ]
+        "description": "Shell脚本对URL和路径参数进行严格验证，阻止shell特殊字符"
       },
       "ssrf": {
         "implemented": true,
-        "description": "URL下载时检测私有网络地址（localhost、127.x、10.x、172.16.x、192.168.x），发出警告但不阻止（支持内网原型分析需求）",
-        "details": [
-          "检测并警告私有IP/回环地址访问",
-          "用户需确认内网URL来源可信",
-          "未来版本可提供配置选项完全阻止内网访问"
-        ]
+        "description": "检测私有网络地址，默认拒绝访问，需用户通过--allow-internal参数明确确认",
+        "userConfirmationRequired": true
       },
       "pathTraversal": {
         "implemented": true,
-        "description": "文件路径验证防止访问敏感系统文件",
-        "details": [
-          "检测敏感路径关键词（.ssh/.env/.git/passwd/shadow/hosts）并发出警告",
-          "限制路径长度",
-          "验证文件存在性"
-        ]
+        "description": "文件路径验证，检测敏感路径关键词"
       },
       "inputValidation": {
         "implemented": true,
-        "description": "所有Python脚本使用标准库处理输入，避免eval/exec等危险操作",
-        "details": [
-          "Python脚本使用sys.argv接收参数，不执行动态代码",
-          "文件读取使用标准open()函数，指定编码",
-          "XMind解析使用标准zipfile库，不解压到任意路径"
-        ]
+        "description": "Python脚本使用标准库处理输入，避免eval/exec"
+      },
+      "noAutoInstall": {
+        "implemented": true,
+        "description": "Shell脚本不自动执行pip install，仅检查依赖并提示用户手动安装"
+      },
+      "externalApiDefaultOff": {
+        "implemented": true,
+        "description": "外部API调用默认禁用，仅在用户设置ANTHROPIC_API_KEY后启用"
       }
     }
   },
@@ -147,22 +145,22 @@
     "数据库设计"
   ],
   "features": [
-    "支持URL原型分析（Figma/墨刀/Axure等公开/内网链接）",
+    "支持公开URL原型分析（Figma/墨刀/Axure等）",
     "支持本地HTML文件解析",
-    "支持图片原型分析（PNG/JPG/WebP等，基础颜色/布局分析）",
+    "支持图片原型分析（PNG/JPG/WebP等）",
     "支持XMind文件解析",
     "自动识别输入类型",
     "生成完整技术文档",
-    "包含前端组件、后端接口、数据库设计",
-    "可选视觉增强分析（需ANTHROPIC_API_KEY）",
-    "实施命令注入防护和输入验证"
+    "内网URL需用户确认 (--allow-internal)",
+    "可选视觉增强分析（需ANTHROPIC_API_KEY，默认禁用）",
+    "不自动安装依赖，需手动pip install"
   ],
   "usage": {
     "examples": [
-      "分析这个Figma原型：https://www.figma.com/file/xxx",
-      "分析这个HTML原型文件：/path/to/prototype.html",
-      "分析这张设计稿截图：/path/to/design.png",
-      "分析这个产品脑图：/path/to/product.xmind"
+      "分析Figma原型：$0 https://www.figma.com/file/xxx",
+      "分析本地HTML：$0 /path/to/prototype.html",
+      "分析内网原型（需确认）：$0 --allow-internal http://internal.company.com/proto",
+      "分析设计图片：$0 /path/to/design.png"
     ]
   },
   "output": {
