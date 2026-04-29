@@ -1,5 +1,7 @@
 # bie-zheng-luan-prototype (别整乱原型分析技能)
 
+> **作者**: 杰哥 | **主页**: https://clawhub.ai/skills/bie-zheng-luan-prototype | **源码**: https://github.com/jermyn-zmj/bie-zheng-luan-prototype
+
 将产品原型转换为详细技术规范的技能，支持4种输入类型：URL原型、本地HTML文件、图片原型、XMind文件。
 
 ## 🎯 功能特性
@@ -97,13 +99,33 @@ cp -r bie-zheng-luan-prototype ~/.openclaw/workspace/skills/
 
 ## 🔧 内置工具
 
-### 脚本文件
-- `scripts/url-prototype-analyzer.sh` - URL原型解析主脚本
-- `scripts/html-extractor.py` - HTML内容提取工具
-- `scripts/spec-generator.py` - 技术文档生成工具
-- `scripts/image-prototype-analyzer.py` - 图片原型分析工具
-- `scripts/xmind-analyzer.py` - XMind文件分析工具
-- `scripts/run_analysis.sh` - 综合分析入口脚本
+### 脚本文件及功能说明
+
+| 脚本文件 | 功能 | 网络访问 | 文件操作 | 安全措施 |
+|---------|------|---------|---------|---------|
+| `url-prototype-analyzer.sh` | URL原型解析主脚本 | curl/wget下载公开URL | 读取HTML、写入输出文件 | URL验证、SSRF检测、命令注入防护 |
+| `run_analysis.sh` | 本地HTML综合分析入口 | 无 | 读取本地HTML、写入输出文件 | 路径验证、敏感路径警告 |
+| `html-extractor.py` | HTML内容深度提取 | 无 | 读取HTML文件 | 纯Python解析，无外部调用 |
+| `spec-generator.py` | 技术文档生成 | 无 | 写入输出文件 | 纯Python生成 |
+| `image-prototype-analyzer.py` | 图片原型分析 | 仅在设置ANTHROPIC_API_KEY时调用Claude API | 读取图片文件 | 默认本地分析，外部API需手动启用 |
+| `xmind-analyzer.py` | XMind文件分析 | 无 | 读取.xmind文件（zip解压） | 纯Python解析 |
+
+**脚本详细行为说明：**
+
+1. **url-prototype-analyzer.sh**
+   - 仅下载用户提供的原型URL（http/https协议）
+   - 内网URL默认阻止，需 `--allow-internal` 参数确认
+   - 不执行任何 pip install 命令
+   - 所有输入参数经过严格验证
+
+2. **run_analysis.sh**
+   - 仅处理本地文件，无网络访问
+   - 路径验证防止命令注入
+   - 敏感路径（.ssh/.env/.git等）会发出警告
+
+3. **image-prototype-analyzer.py**
+   - 默认使用本地分析（颜色提取、布局推断），无数据传输
+   - 设置 `ANTHROPIC_API_KEY` 后可启用视觉增强分析（图片会发送到Anthropic服务器）
 
 ### 参考模板
 - `references/template-spec.md` - 技术规范文档模板
@@ -221,6 +243,11 @@ bie-zheng-luan-prototype/
 - 在隔离环境中首次测试
 
 ## 🔄 版本历史
+
+### v2.9.2 (2026-04-29)
+- ✅ 增强文档透明度：补充脚本功能详细说明表格（网络访问、文件操作、安全措施）
+- ✅ 补充作者信息和项目链接在README顶部
+- ✅ 响应平台安全审查建议，提高脚本行为透明度
 
 ### v2.9.1 (2026-04-29)
 - ✅ 修复spec-generator.py的Python 3.7兼容性问题（`str | None`改为`Optional[str]`）
