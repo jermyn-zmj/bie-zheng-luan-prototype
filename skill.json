@@ -1,8 +1,8 @@
 {
   "name": "bie-zheng-luan-prototype",
   "displayName": "别整乱原型分析技能",
-  "version": "2.6.0",
-  "description": "将产品原型转换为详细技术规范的技能。深度解析HTML原型，提取完整的菜单结构、筛选条件、表格列、操作按钮等信息。支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型。",
+  "version": "2.9.1",
+  "description": "将产品原型转换为详细技术规范的技能。深度解析HTML原型，提取完整的菜单结构、筛选条件、表格列、操作按钮等信息。支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型。完全通用化设计，不硬编码任何业务专有名词，可适配任何业务领域的原型系统。",
   "author": "杰哥",
   "license": "MIT",
   "repository": {

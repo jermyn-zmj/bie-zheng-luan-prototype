@@ -424,6 +424,8 @@ main() {
     else
         trap "rm -f $ANALYSIS_JSON_FILE" EXIT
     fi
+    local script_dir=$(dirname "$0")
+    local extractor_script="$script_dir/html-extractor.py"
     $PYTHON "$extractor_script" "$HTML_FILE" json > "$ANALYSIS_JSON_FILE" 2>/dev/null
     
     # 生成技术文档

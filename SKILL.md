@@ -1,7 +1,6 @@
 ---
 name: bie-zheng-luan-prototype
-description: "将产品原型转换为详细技术规范的技能。深度解析HTML原型，提取完整的菜单结构、筛选条件、表格列、操作按钮等信息。支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型。输出包含前端组件描述、后端接口设计、数据库表设计的完整技术文档。"
-version: "2.6.0"
+description: "将产品原型转换为详细技术规范的技能。深度解析HTML原型，提取完整的菜单结构、筛选条件、表格列、操作按钮等信息。支持URL原型、本地HTML文件、图片原型、XMind文件四种输入类型。输出包含前端组件描述、后端接口设计、数据库表设计的完整技术文档。增强版包含智能路由推断、业务API接口推断、完整数据库表结构设计、实体关系图、状态枚举定义。"
 ---
 
 # 别整乱七八糟原型分析技能 (bie-zheng-luan-prototype)
@@ -314,7 +313,14 @@ python scripts/xmind-analyzer.py product.xmind markdown
 
 ### 内置脚本
 - `scripts/url-prototype-analyzer.sh` - URL原型解析主脚本
-- `scripts/html-extractor.py` - HTML内容提取工具
+- `scripts/html-extractor.py` - HTML内容提取工具入口（调用 html_extractor 包）
+- `scripts/html_extractor/` - HTML解析核心模块包
+  - `config.py` - UI框架配置
+  - `models.py` - 数据结构定义
+  - `detector.py` - UI框架检测器
+  - `extractor.py` - 核心解析器
+  - `utils.py` - 辅助函数
+  - `main.py` - 入口函数
 - `scripts/spec-generator.py` - 技术文档生成工具
 - `scripts/image-prototype-analyzer.py` - 图片原型分析工具
 - `scripts/xmind-analyzer.py` - XMind文件分析工具
@@ -534,11 +540,14 @@ python scripts/xmind-analyzer.py product.xmind markdown
 
 ---
 
-*最后更新：2026-04-23*
-*版本：2.3.0 (安全增强版)*
+*最后更新：2026-04-29*
 *作者：杰哥*
 
 **更新日志**：
+- v2.9.1 (2026-04-29): 修复spec-generator.py的Python 3.7兼容性问题（`str | None`改为`Optional[str]`）
+- v2.9.0 (2026-04-29): 完全通用化重构：移除所有硬编码的业务专有名词（如"采购"、"供应商"、"质检"、"入库"等），使skill可适配任何业务领域（仓储、ERP、WMS、CMS等）。动态生成路由、API接口、数据库表，不依赖特定业务词汇映射。
+- v2.8.0 (2026-04-29): 增强技术实现推断能力：智能路由解析（处理javascript:void(0)等特殊值）、增强按钮位置识别（多层级父元素检查）、业务API接口推断、完整数据库表设计、实体关系图、状态枚举定义
+- v2.7.0 (2026-04-29): 模块化重构：将 html-extractor.py (2000+行) 拆分为 html_extractor 包（7个模块），提高可维护性
 - v2.6.0 (2026-04-24): 补充弹窗/抽屉面板解析：弹窗内表单字段、锚点导航、统计信息、状态筛选Tab、进度条组件
 - v2.5.0 (2026-04-24): 补充缺失解析模块：消息通知卡片、采购员进度卡片、页面标签栏、用户信息区、子标签切换；优化表格层级识别和数据类型推断
 - v2.4.0 (2026-04-24): 重写HTML解析器，深度提取菜单结构、筛选条件、表格列、操作按钮、多页面视图

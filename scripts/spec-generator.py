@@ -8,7 +8,7 @@ import sys
 import json
 import re
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 import argparse
 
@@ -664,7 +664,7 @@ const routes = [
         
         return interaction_details
     
-    def _extract_ref_section(self, ref_content: str | None, section_title: str) -> str | None:
+    def _extract_ref_section(self, ref_content: Optional[str], section_title: str) -> Optional[str]:
         """从参考文件中提取指定章节的内容"""
         if not ref_content:
             return None

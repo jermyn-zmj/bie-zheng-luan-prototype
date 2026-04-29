@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python **)",
+      "Read(//c/Users/Administrator/.claude/skills/bie-zheng-luan-prototype/**)",
+      "Edit(~/.claude/skills/bie-zheng-luan-prototype/**)",
+      "Bash(python3 **)",
+      "Bash(python -c **)",
+      "Bash(bash -n **)",
+      "Bash(python -c ' *)",
+      "Bash(rm **)",
+      "Bash(pip show *)",
+      "Bash(dir **)"
+    ],
+    "additionalDirectories": [
+      "E:\\ai\\bie-zheng-luan-prototype\\scripts"
+    ]
+  }
+}
