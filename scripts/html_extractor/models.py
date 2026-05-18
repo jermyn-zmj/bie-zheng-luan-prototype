@@ -22,8 +22,8 @@ class MenuItem:
 @dataclass
 class UserInfo:
     """用户信息"""
-    avatar_text: str         # 头像文字（如"文"）
-    name: str                # 用户姓名（如"文俊"）
+    avatar_text: str         # 头像文字（如"A"）
+    name: str                # 用户姓名（如"张三"）
     role: str                # 用户角色（如"管理员"）
 
 
@@ -55,11 +55,11 @@ class SubPill:
 @dataclass
 class FilterField:
     """筛选字段"""
-    name: str                # 字段名（如"款式分类"）
+    name: str                # 字段名（如"分类"）
     type: str                # 类型：select/input/text/date
-    options: List[str]       # 下拉选项（如["全部", "裤袜", "运动"]）
+    options: List[str]       # 下拉选项（如["全部", "选项A", "选项B"]）
     placeholder: str         # 占位符（input类型）
-    filter_id: str           # 筛选器ID（如"pr-filter-1")
+    filter_id: str           # 筛选器ID（如"filter-1")
     default_value: str       # 默认值
 
 
@@ -108,8 +108,8 @@ class MessageCard:
 
 
 @dataclass
-class BuyerCard:
-    """用户工作进度卡片"""
+class StaffCard:
+    """人员工作进度卡片"""
     avatar: str              # 头像（可能是图片或文字）
     name: str                # 姓名
     tag: str                 # 标签
@@ -171,7 +171,7 @@ class DrawerStatistics:
 @dataclass
 class DrawerPanel:
     """弹窗/抽屉面板"""
-    panel_id: str            # 弹窗ID（如"drawer-por-detail"）
+    panel_id: str            # 弹窗ID（如"drawer-detail"）
     title: str               # 弹窗标题（如"详情查看"）
     title_icon: str          # 标题图标描述
     status_badge_id: str     # 状态badge元素ID
@@ -205,7 +205,7 @@ class PageView:
     buttons: List[ActionButton] = field(default_factory=list)
     stat_cards: List[StatCard] = field(default_factory=list)
     message_cards: List[MessageCard] = field(default_factory=list)
-    buyer_cards: List[BuyerCard] = field(default_factory=list)
+    staff_cards: List[StaffCard] = field(default_factory=list)
     sub_pills: List[SubPill] = field(default_factory=list)
     status_tabs: List[StatusTab] = field(default_factory=list)
     progress_items: List[ProgressItem] = field(default_factory=list)
@@ -269,3 +269,62 @@ class PrototypeAnalysis:
     total_buttons: int       # 总按钮数
     analysis_time: str       # 分析时间
     tech_implementation: Optional[TechImplementation] = None  # 技术实现建议
+
+
+# ==================== 业务流程分析相关数据结构 ====================
+
+@dataclass
+class OperationAnalysis:
+    """操作分析结果"""
+    name: str                # 操作名称
+    category: str            # 操作类别
+    requires_selection: bool # 是否需要勾选记录
+    possible_states: List[str]  # 推断的可执行状态
+    description: str         # 功能描述
+
+@dataclass
+class PageAnalysis:
+    """单个页面的业务分析结果"""
+    page_name: str           # 页面名称
+    view_id: str             # 视图ID
+    inferred_role: str       # 推断的页面角色（入口/处理/查看/配置）
+    operations: List[OperationAnalysis]  # 操作列表
+    key_fields: List[str]    # 关键字段
+    status_fields: List[str] # 状态相关字段
+    filter_dimensions: List[str]  # 筛选维度
+    has_checkbox: bool       # 是否有勾选列（支持批量操作）
+
+@dataclass
+class FlowHypothesis:
+    """流程假设"""
+    sequence: List[str]          # 页面流转顺序
+    confidence: float            # 置信度（0-1）
+    evidence: List[str]          # 推断依据
+
+@dataclass
+class StatusTransition:
+    """状态流转假设"""
+    page_name: str               # 页面名称
+    status_field: str            # 状态字段名
+    possible_values: List[str]   # 可能的状态值
+    transitions: List[str]       # 推断的流转规则
+    evidence: List[str]          # 推断依据
+
+@dataclass
+class AnalysisQuestion:
+    """生成的问题"""
+    category: str      # 问题类别（flow/status/permission/field/operation）
+    priority: str      # 优先级（high/medium/low）
+    question: str      # 问题内容
+    context: str       # 问题上下文/推断依据
+    options: List[str] # 建议选项（如果有）
+
+@dataclass
+class InteractiveAnalysis:
+    """交互式分析结果"""
+    system_name: str
+    page_analyses: List[PageAnalysis]
+    flow_hypothesis: FlowHypothesis
+    status_transitions: List[StatusTransition]
+    questions: List[AnalysisQuestion]
+    analysis_summary: str  # 分析总结

@@ -24,11 +24,13 @@ from .utils import find_by_patterns
 from .models import (
     MenuItem, UserInfo, SidebarInfo, PageTab, SubPill,
     FilterField, TableColumn, ActionButton, StatCard,
-    MessageCard, BuyerCard, StatusTab, ProgressItem,
+    MessageCard, StaffCard, StatusTab, ProgressItem,
     DrawerAnchorLink, DrawerFormField, DrawerStatistics,
     DrawerPanel, TableInfo, PageView, PrototypeAnalysis,
-    APIEndpoint, DatabaseTable, EntityRelation, TechImplementation
+    APIEndpoint, DatabaseTable, EntityRelation, TechImplementation,
+    InteractiveAnalysis
 )
+from .analyzer import BusinessFlowAnalyzer
 
 # 设置标准输出编码为UTF-8（仅在直接运行时）
 def _setup_utf8_output():
@@ -66,8 +68,8 @@ class EnhancedHTMLExtractor:
         # 4. 页面标签栏
         page_tabs = self._extract_page_tabs()
 
-        # 5. 页面视图
-        page_views = self._extract_all_page_views()
+        # 5. 页面视图（传入菜单用于名称匹配）
+        page_views = self._extract_all_page_views(menus)
 
         # 6. 统计
         total_filters = sum(len(pv.filters) for pv in page_views)
@@ -90,6 +92,193 @@ class EnhancedHTMLExtractor:
             analysis_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             tech_implementation=tech_implementation
         )
+
+    def extract_interactive_analysis(self) -> InteractiveAnalysis:
+        """
+        提取交互式分析结果
+        分析业务流程，推断状态流转，生成问题让用户确认
+        """
+        # 1. 获取基础结构
+        analysis = self.extract_full_structure()
+
+        # 2. 使用业务流程分析器
+        analyzer = BusinessFlowAnalyzer(analysis.menus, analysis.page_views)
+        interactive = analyzer.analyze()
+
+        # 3. 填充系统名称
+        interactive.system_name = analysis.system_name
+
+        return interactive
+
+    def to_interactive_markdown(self, interactive: InteractiveAnalysis) -> str:
+        """
+        将交互式分析结果转换为Markdown格式
+        """
+        md_lines = []
+
+        # 标题
+        md_lines.append("# 原型业务分析报告")
+        md_lines.append("")
+        md_lines.append(f"**系统名称**: {interactive.system_name}")
+        md_lines.append("")
+
+        # 分析总结
+        md_lines.append("## 一、分析总结")
+        md_lines.append("")
+        md_lines.append(interactive.analysis_summary)
+        md_lines.append("")
+
+        # 流程假设
+        md_lines.append("## 二、业务流程假设")
+        md_lines.append("")
+
+        if interactive.flow_hypothesis.sequence:
+            md_lines.append("### 流程顺序")
+            md_lines.append("")
+            md_lines.append("```")
+            md_lines.append(" → ".join(interactive.flow_hypothesis.sequence[:10]))
+            if len(interactive.flow_hypothesis.sequence) > 10:
+                md_lines.append(" → ...")
+            md_lines.append("```")
+            md_lines.append("")
+            md_lines.append(f"**置信度**: {interactive.flow_hypothesis.confidence:.0%}")
+            md_lines.append("")
+
+            md_lines.append("**推断依据**:")
+            md_lines.append("")
+            for ev in interactive.flow_hypothesis.evidence:
+                md_lines.append(f"- {ev}")
+            md_lines.append("")
+
+        # 页面功能分析
+        md_lines.append("## 三、页面功能分析")
+        md_lines.append("")
+
+        for pa in interactive.page_analyses:
+            md_lines.append(f"### {pa.page_name}")
+            md_lines.append("")
+            md_lines.append(f"- **页面角色**: {pa.inferred_role}")
+            md_lines.append(f"- **视图ID**: `{pa.view_id}`")
+
+            if pa.has_checkbox:
+                md_lines.append(f"- **支持批量操作**: 是")
+
+            md_lines.append("")
+
+            # 操作列表
+            if pa.operations:
+                md_lines.append("**可执行操作**:")
+                md_lines.append("")
+                md_lines.append("| 操作 | 类别 | 需要勾选 | 可能状态 |")
+                md_lines.append("|-----|------|---------|---------|")
+                for op in pa.operations:
+                    states_str = ", ".join(op.possible_states[:2])
+                    selection_str = "✓" if op.requires_selection else "-"
+                    md_lines.append(f"| {op.name} | {op.category} | {selection_str} | {states_str} |")
+                md_lines.append("")
+
+            # 关键字段
+            if pa.key_fields:
+                md_lines.append(f"**关键字段**: {', '.join(pa.key_fields[:8])}{'...' if len(pa.key_fields) > 8 else ''}")
+                md_lines.append("")
+
+            # 筛选维度
+            if pa.filter_dimensions:
+                md_lines.append(f"**筛选维度**: {', '.join(pa.filter_dimensions[:5])}{'...' if len(pa.filter_dimensions) > 5 else ''}")
+                md_lines.append("")
+
+            md_lines.append("---")
+            md_lines.append("")
+
+        # 状态流转
+        if interactive.status_transitions:
+            md_lines.append("## 四、状态流转假设")
+            md_lines.append("")
+
+            for trans in interactive.status_transitions:
+                md_lines.append(f"### {trans.page_name} - {trans.status_field}")
+                md_lines.append("")
+
+                if trans.possible_values:
+                    md_lines.append(f"**可能的状态值**: {', '.join(trans.possible_values)}")
+                    md_lines.append("")
+
+                if trans.transitions:
+                    md_lines.append("**推断的流转规则**:")
+                    md_lines.append("")
+                    for rule in trans.transitions:
+                        md_lines.append(f"- {rule}")
+                    md_lines.append("")
+
+                md_lines.append("---")
+                md_lines.append("")
+
+        # 需要确认的问题
+        md_lines.append("## 五、需要确认的问题")
+        md_lines.append("")
+
+        # 按优先级分组
+        high_questions = [q for q in interactive.questions if q.priority == 'high']
+        medium_questions = [q for q in interactive.questions if q.priority == 'medium']
+        low_questions = [q for q in interactive.questions if q.priority == 'low']
+
+        if high_questions:
+            md_lines.append("### 高优先级（流程和状态相关）")
+            md_lines.append("")
+            for i, q in enumerate(high_questions, 1):
+                md_lines.append(f"**Q{i}: {q.question}**")
+                md_lines.append("")
+                if q.context:
+                    md_lines.append(f"> 推断依据：{q.context}")
+                    md_lines.append("")
+                if q.options:
+                    md_lines.append("建议选项：")
+                    for opt in q.options:
+                        md_lines.append(f"- [ ] {opt}")
+                    md_lines.append("")
+                md_lines.append("您的回答：_____")
+                md_lines.append("")
+                md_lines.append("---")
+                md_lines.append("")
+
+        if medium_questions:
+            md_lines.append("### 中优先级（操作和权限相关）")
+            md_lines.append("")
+            for i, q in enumerate(medium_questions, 1):
+                md_lines.append(f"**Q{i}: {q.question}**")
+                md_lines.append("")
+                if q.context:
+                    md_lines.append(f"> 推断依据：{q.context}")
+                    md_lines.append("")
+                if q.options:
+                    md_lines.append("建议选项：")
+                    for opt in q.options:
+                        md_lines.append(f"- [ ] {opt}")
+                    md_lines.append("")
+                md_lines.append("您的回答：_____")
+                md_lines.append("")
+                md_lines.append("---")
+                md_lines.append("")
+
+        if low_questions:
+            md_lines.append("### 低优先级（字段细节）")
+            md_lines.append("")
+            for i, q in enumerate(low_questions, 1):
+                md_lines.append(f"**Q{i}: {q.question}**")
+                md_lines.append("")
+                if q.context:
+                    md_lines.append(f"> 推断依据：{q.context}")
+                    md_lines.append("")
+                md_lines.append("您的回答：_____")
+                md_lines.append("")
+
+        # 结尾
+        md_lines.append("---")
+        md_lines.append("")
+        md_lines.append("*请根据以上分析结果，确认或修正AI的推断。*")
+        md_lines.append("*对于标记为高优先级的问题，请优先回答。*")
+
+        return "\n".join(md_lines)
 
     def _extract_system_name(self, title: str) -> str:
         """从标题提取系统名称"""
@@ -284,8 +473,14 @@ class EnhancedHTMLExtractor:
 
         return "功能图标"
 
-    def _extract_all_page_views(self) -> list:
+    def _extract_all_page_views(self, menus: list = None) -> list:
         """提取所有页面视图（使用可配置模式）"""
+        # 构建 view_id → 菜单名称 的映射
+        menu_name_map = {}
+        if menus:
+            for menu in menus:
+                if menu.page_id:
+                    menu_name_map[menu.page_id.lower()] = menu.name
         page_views = []
 
         view_config = self.config.get('page_view', {})
@@ -320,6 +515,24 @@ class EnhancedHTMLExtractor:
 
             view_name = self._infer_page_name(view_id, container)
 
+            # 使用菜单名称覆盖（如果匹配到）
+            if menu_name_map:
+                # view_id 如 "viewWarning" 或 "scm-view-purchase-booking" → 提取关键部分匹配 menu page_id
+                id_part = view_id
+                for prefix in ['scm-view-', 'view-', 'view', 'page-', 'page']:
+                    if id_part.lower().startswith(prefix):
+                        id_part = id_part[len(prefix):]
+                        break
+                id_key = id_part.lower().replace('-', '').replace('_', '')
+                # 同时标准化 menu key（去掉连字符）
+                normalized_map = {k.replace('-', '').replace('_', ''): v for k, v in menu_name_map.items()}
+                if id_key in normalized_map:
+                    view_name = normalized_map[id_key]
+
+            # 跳过加载指示器等无效页面
+            if view_name in ['加载中…', '加载中...', 'Loading', 'loading']:
+                continue
+
             # 提取各组件
             sub_pills = self._extract_sub_pills(container)
             filters = self._extract_filter_fields(container)
@@ -327,7 +540,7 @@ class EnhancedHTMLExtractor:
             buttons = self._extract_buttons(container)
             stat_cards = self._extract_stat_cards(container)
             message_cards = self._extract_message_cards(container)
-            buyer_cards = self._extract_buyer_cards(container)
+            staff_cards = self._extract_staff_cards(container)
             status_tabs = self._extract_status_tabs(container)
             progress_items = self._extract_progress_items(container)
             drawer_panels = self._extract_drawer_panels(container)
@@ -340,7 +553,7 @@ class EnhancedHTMLExtractor:
                 buttons=buttons,
                 stat_cards=stat_cards,
                 message_cards=message_cards,
-                buyer_cards=buyer_cards,
+                staff_cards=staff_cards,
                 sub_pills=sub_pills,
                 status_tabs=status_tabs,
                 progress_items=progress_items,
@@ -356,7 +569,7 @@ class EnhancedHTMLExtractor:
                 buttons = self._extract_buttons(self.soup)
                 stat_cards = self._extract_stat_cards(self.soup)
                 message_cards = self._extract_message_cards(self.soup)
-                buyer_cards = self._extract_buyer_cards(self.soup)
+                staff_cards = self._extract_staff_cards(self.soup)
                 status_tabs = self._extract_status_tabs(self.soup)
                 progress_items = self._extract_progress_items(self.soup)
                 drawer_panels = self._extract_drawer_panels(self.soup)
@@ -369,7 +582,7 @@ class EnhancedHTMLExtractor:
                     buttons=buttons,
                     stat_cards=stat_cards,
                     message_cards=message_cards,
-                    buyer_cards=buyer_cards,
+                    staff_cards=staff_cards,
                     sub_pills=[],
                     status_tabs=status_tabs,
                     progress_items=progress_items,
@@ -404,7 +617,9 @@ class EnhancedHTMLExtractor:
         """推断页面名称"""
         title_elem = container.find(['h1', 'h2', 'h3'])
         if title_elem:
-            return title_elem.get_text(strip=True)
+            text = title_elem.get_text(strip=True)
+            if text and text not in ['加载中…', '加载中...', 'Loading']:
+                return text
 
         page_title = container.find('title')
         if page_title:
@@ -416,8 +631,14 @@ class EnhancedHTMLExtractor:
             return container.get('aria-label')
 
         if view_id:
-            clean_id = view_id.replace('view-', '').replace('-view', '').replace('page-', '')
-            words = clean_id.replace('-', ' ').replace('_', ' ').split()
+            # 去掉常见前缀
+            clean_id = view_id
+            for prefix in ['view-', 'view', 'page-', 'page']:
+                if clean_id.lower().startswith(prefix):
+                    clean_id = clean_id[len(prefix):]
+                    break
+            # camelCase 拆分
+            words = re.sub(r'([a-z])([A-Z])', r'\1 \2', clean_id).replace('-', ' ').replace('_', ' ').split()
             if words:
                 return ' '.join(word.capitalize() for word in words)
             return view_id
@@ -567,7 +788,7 @@ class EnhancedHTMLExtractor:
             return 'number'
         if any(kw in col_name_lower for kw in ['价格', '金额', '单价']) and '¥' in cell.get_text():
             return 'currency'
-        if any(kw in col_name_lower for kw in ['税率', '百分比', '占比', '不合格率']):
+        if any(kw in col_name_lower for kw in ['率', '百分比', '占比']):
             return 'percentage'
         if any(kw in col_name_lower for kw in ['状态', '进度', '审核状态', '确认状态']):
             return 'badge'
@@ -636,6 +857,10 @@ class EnhancedHTMLExtractor:
             if not btn_text:
                 continue
 
+            # 跳过无意义的按钮（纯图标按钮、下拉箭头等）
+            if len(btn_text) <= 1 or btn_text in ['▼', '▲', '◀', '▶', '...', '···', '…']:
+                continue
+
             btn_id = btn.get('id', '')
 
             # 推断按钮位置（增强版 - 多层级父元素检查）
@@ -673,7 +898,16 @@ class EnhancedHTMLExtractor:
                 location=location
             ))
 
-        return buttons
+        # 去重：同名同位置的按钮只保留一个
+        seen = set()
+        unique_buttons = []
+        for btn in buttons:
+            key = (btn.name, btn.location)
+            if key not in seen:
+                seen.add(key)
+                unique_buttons.append(btn)
+
+        return unique_buttons
 
     def _infer_button_location(self, btn) -> str:
         """推断按钮位置（增强版 - 多层级检查）"""
@@ -920,12 +1154,12 @@ class EnhancedHTMLExtractor:
 
         return cards
 
-    def _extract_buyer_cards(self, container) -> list:
+    def _extract_staff_cards(self, container) -> list:
         """提取用户工作进度卡片"""
         cards = []
 
-        buyer_cards = container.find_all('div', class_='buyer-card')
-        for card in buyer_cards:
+        staff_cards = container.find_all('div', class_='buyer-card')
+        for card in staff_cards:
             avatar_elem = card.find('div', class_='avatar')
             avatar = ""
             if avatar_elem:
@@ -984,7 +1218,7 @@ class EnhancedHTMLExtractor:
                 if btn_text:
                     action_buttons.append(btn_text)
 
-            cards.append(BuyerCard(
+            cards.append(StaffCard(
                 avatar=avatar,
                 name=name,
                 tag=tag,
@@ -1005,13 +1239,15 @@ class EnhancedHTMLExtractor:
             chips = group.find_all('span', class_='pr-status-chip')
             for chip in chips:
                 chip_text = chip.get_text(strip=True)
-                match = re.match(r'(.+?)\s+(\d+)', chip_text)
+                # 匹配 "状态名7670" 或 "状态名 7670" 格式（名称+数量）
+                match = re.match(r'^(.+?)(\d+)$', chip_text)
                 if match:
-                    name = match.group(1)
+                    name = match.group(1).strip()
                     try:
                         count = int(match.group(2))
                     except:
                         count = 0
+                        name = chip_text
                 else:
                     name = chip_text
                     count = 0
@@ -1385,12 +1621,12 @@ class EnhancedHTMLExtractor:
                 md_lines.append("")
 
             # 用户工作进度卡片
-            if page_view.buyer_cards:
+            if page_view.staff_cards:
                 md_lines.append("#### 用户工作进度概览")
                 md_lines.append("")
                 md_lines.append(f"| 姓名 | 标签 | 统计数据 | 已逾期 | 操作按钮 |")
                 md_lines.append(f"|-----|------|---------|-------|---------|")
-                for card in page_view.buyer_cards:
+                for card in page_view.staff_cards:
                     stats_str = '; '.join([f"{k}: {v}" for k, v in card.stats.items()])
                     buttons_str = ', '.join(card.action_buttons)
                     md_lines.append(f"| {card.name} | {card.tag}({card.tag_color}) | {stats_str} | {card.overdue_count}个 | {buttons_str} |")

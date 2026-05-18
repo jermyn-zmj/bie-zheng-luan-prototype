@@ -15,9 +15,15 @@ def main():
     _setup_utf8_output()
 
     if len(sys.argv) < 2:
-        print("用法: python html-extractor.py <html文件> [输出格式: markdown|json]")
+        print("用法: python html-extractor.py <html文件> [输出格式: markdown|json|interactive]")
+        print("")
+        print("输出格式说明:")
+        print("  markdown     - 标准分析报告（默认）")
+        print("  json         - JSON格式数据")
+        print("  interactive  - 交互式业务分析（包含流程推断和问题）")
+        print("")
         print("示例: python html-extractor.py page.html markdown")
-        print("      python html-extractor.py page.html json")
+        print("      python html-extractor.py page.html interactive")
         sys.exit(1)
 
     html_file = sys.argv[1]
@@ -37,17 +43,21 @@ def main():
     extractor = EnhancedHTMLExtractor(html_content, f"file://{html_file}")
 
     try:
-        analysis = extractor.extract_full_structure()
+        if output_format.lower() == "interactive":
+            # 交互式分析模式
+            interactive = extractor.extract_interactive_analysis()
+            result = extractor.to_interactive_markdown(interactive)
+        elif output_format.lower() == "json":
+            analysis = extractor.extract_full_structure()
+            result = extractor.to_json(analysis)
+        else:
+            analysis = extractor.extract_full_structure()
+            result = extractor.to_markdown(analysis)
     except Exception as e:
         print(f"分析HTML失败: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
-    if output_format.lower() == "json":
-        result = extractor.to_json(analysis)
-    else:
-        result = extractor.to_markdown(analysis)
 
     print(result)
 

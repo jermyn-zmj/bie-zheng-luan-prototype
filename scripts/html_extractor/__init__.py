@@ -7,14 +7,17 @@ from .config import UI_FRAMEWORK_CONFIGS, get_framework_config, get_all_framewor
 from .models import (
     MenuItem, UserInfo, SidebarInfo, PageTab, SubPill,
     FilterField, TableColumn, ActionButton, StatCard,
-    MessageCard, BuyerCard, StatusTab, ProgressItem,
+    MessageCard, StaffCard, StatusTab, ProgressItem,
     DrawerAnchorLink, DrawerFormField, DrawerStatistics,
     DrawerPanel, TableInfo, PageView, PrototypeAnalysis,
-    APIEndpoint, DatabaseTable, EntityRelation, TechImplementation
+    APIEndpoint, DatabaseTable, EntityRelation, TechImplementation,
+    PageAnalysis, OperationAnalysis, FlowHypothesis, StatusTransition,
+    AnalysisQuestion, InteractiveAnalysis
 )
 from .detector import UIFrameworkDetector
 from .utils import find_by_patterns
 from .extractor import EnhancedHTMLExtractor, _setup_utf8_output
+from .analyzer import BusinessFlowAnalyzer
 from .main import main
 
 __all__ = [
@@ -33,7 +36,7 @@ __all__ = [
     'ActionButton',
     'StatCard',
     'MessageCard',
-    'BuyerCard',
+    'StaffCard',
     'StatusTab',
     'ProgressItem',
     'DrawerAnchorLink',
@@ -43,13 +46,22 @@ __all__ = [
     'TableInfo',
     'PageView',
     'PrototypeAnalysis',
-    # 新增模型
+    # 技术实现模型
     'APIEndpoint',
     'DatabaseTable',
     'EntityRelation',
     'TechImplementation',
+    # 业务分析模型
+    'PageAnalysis',
+    'OperationAnalysis',
+    'FlowHypothesis',
+    'StatusTransition',
+    'AnalysisQuestion',
+    'InteractiveAnalysis',
     # 检测器
     'UIFrameworkDetector',
+    # 分析器
+    'BusinessFlowAnalyzer',
     # 工具
     'find_by_patterns',
     # 解析器
@@ -58,4 +70,4 @@ __all__ = [
     'main',
 ]
 
-__version__ = '2.9.2'
+__version__ = '3.1.0'

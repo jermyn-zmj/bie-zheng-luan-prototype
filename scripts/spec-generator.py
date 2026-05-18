@@ -399,7 +399,7 @@ class SpecGenerator:
         icon_map = {
             '用户': 'User',
             '产品': 'Product',
-            '订单': 'ShoppingCart',
+            '单据': 'FileText',
             '设置': 'Settings',
             '仪表盘': 'Dashboard',
             '数据': 'Database',

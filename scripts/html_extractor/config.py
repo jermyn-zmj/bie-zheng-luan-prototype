@@ -50,7 +50,7 @@ UI_FRAMEWORK_CONFIGS: Dict[str, Dict[str, Any]] = {
             },
         },
         'page_view': {
-            'container': ['div.view', 'div.page-view', 'div.main-wrap', 'div[data-view]', 'div[data-page]'],
+            'container': ['div.view', 'div.page-view', 'div.main-wrap', 'div.scm-view', 'div[data-view]', 'div[data-page]'],
         },
         'modal': {
             'container': ['div.drawer-panel', 'div.modal-overlay'],

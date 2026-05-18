@@ -2,7 +2,7 @@
 
 > **作者**: 杰哥 | **主页**: https://clawhub.ai/skills/bie-zheng-luan-prototype | **源码**: https://github.com/jermyn-zmj/bie-zheng-luan-prototype
 
-将产品原型转换为详细技术规范的技能，支持4种输入类型：URL原型、本地HTML文件、图片原型、XMind文件。
+将产品原型转换为详细技术规范的技能，支持4种输入类型：URL原型、本地HTML文件、图片原型、XMind文件。新增交互式业务分析功能，可从原型推断业务流程。
 
 ## 🎯 功能特性
 
@@ -14,6 +14,9 @@
 
 ### ✅ 核心能力
 - **智能解析**：自动识别输入类型并选择相应解析方式
+- **深度HTML解析**：提取菜单、筛选条件、表格列、操作按钮、状态Tab、抽屉面板等完整信息
+- **多UI框架适配**：自动检测并适配企业后台、标准后台、移动端H5等UI框架
+- **交互式业务分析**：从原型推断业务流程、状态流转，生成问题让用户确认
 - **功能拆解**：将原型元素拆解为前端组件、后端接口、数据库设计
 - **技术文档生成**：输出完整的技术规范文档
 - **多格式支持**：HTML、图片、思维导图全面覆盖
@@ -53,6 +56,18 @@ cp -r bie-zheng-luan-prototype ~/.openclaw/workspace/skills/
 分析这个产品脑图：/path/to/product.xmind
 ```
 
+### HTML分析输出格式
+```bash
+# 标准分析报告（默认）
+python scripts/html-extractor.py prototype.html markdown
+
+# JSON格式数据
+python scripts/html-extractor.py prototype.html json
+
+# 交互式业务分析（包含流程推断和问题）
+python scripts/html-extractor.py prototype.html interactive
+```
+
 ### 输入类型自动识别
 技能会根据输入内容自动判断解析方式：
 
@@ -79,19 +94,26 @@ cp -r bie-zheng-luan-prototype ~/.openclaw/workspace/skills/
 - 功能模块清单
 - 交互元素识别
 
-### 3. 前端实现方案
+### 3. 业务流程分析（交互式模式）
+- 业务流程顺序（页面流转图）
+- 每个页面的操作列表和执行条件
+- 状态流转规则（状态机图）
+- 关键字段和筛选维度
+- 需要用户确认的问题清单
+
+### 4. 前端实现方案
 - 页面路由规划
 - 组件清单（名称、props、状态、交互逻辑）
 - 样式方案（CSS框架、设计系统）
 - 交互细节
 
-### 4. 后端实现方案
+### 5. 后端实现方案
 - API接口设计（路由、HTTP方法、参数、返回值）
 - 业务逻辑伪代码
 - 数据库表设计
 - 第三方服务集成
 
-### 5. 开发注意事项
+### 6. 开发注意事项
 - 技术栈建议
 - 特殊依赖说明
 - 性能和安全考虑
@@ -106,6 +128,7 @@ cp -r bie-zheng-luan-prototype ~/.openclaw/workspace/skills/
 | `url-prototype-analyzer.sh` | URL原型解析主脚本 | curl/wget下载公开URL | 读取HTML、写入输出文件 | URL验证、SSRF检测、命令注入防护 |
 | `run_analysis.sh` | 本地HTML综合分析入口 | 无 | 读取本地HTML、写入输出文件 | 路径验证、敏感路径警告 |
 | `html-extractor.py` | HTML内容深度提取 | 无 | 读取HTML文件 | 纯Python解析，无外部调用 |
+| `html_extractor/analyzer.py` | 业务流程分析 | 无 | 无 | 纯Python分析 |
 | `spec-generator.py` | 技术文档生成 | 无 | 写入输出文件 | 纯Python生成 |
 | `image-prototype-analyzer.py` | 图片原型分析 | 仅在设置ANTHROPIC_API_KEY时调用Claude API | 读取图片文件 | 默认本地分析，外部API需手动启用 |
 | `xmind-analyzer.py` | XMind文件分析 | 无 | 读取.xmind文件（zip解压） | 纯Python解析 |
@@ -139,13 +162,14 @@ cp -r bie-zheng-luan-prototype ~/.openclaw/workspace/skills/
 
 ### 解析流程
 ```
-输入识别 → 内容解析 → 功能拆解 → 文档生成 → 输出保存
+输入识别 → 内容解析 → 业务分析 → 功能拆解 → 文档生成 → 输出保存
 ```
 
 ### 依赖要求
 - **Python 3.8+**
 - **Python包（核心）**：
   - `beautifulsoup4` (HTML解析)
+  - `lxml` (HTML解析器)
   - `Pillow` (图片处理)
 - **Python包（可选，用于增强功能）**：
   - `anthropic` (Claude Vision API，用于图片原型精确分析) — 需设置 `ANTHROPIC_API_KEY`
@@ -160,8 +184,16 @@ bie-zheng-luan-prototype/
 ├── skill.json                  # 技能元数据
 ├── scripts/                    # 分析脚本
 │   ├── url-prototype-analyzer.sh
-│   ├── html-extractor.py
-│   ├── spec-generator.py
+│   ├── html-extractor.py       # HTML提取入口
+│   ├── html_extractor/         # HTML解析核心模块包
+│   │   ├── config.py           # UI框架配置
+│   │   ├── models.py           # 数据结构定义
+│   │   ├── detector.py         # UI框架检测器
+│   │   ├── extractor.py        # 核心解析器
+│   │   ├── analyzer.py         # 业务流程分析器
+│   │   ├── utils.py            # 辅助函数
+│   │   └── main.py             # 入口函数
+│   ├── spec-generator.py       # 技术文档生成工具
 │   ├── image-prototype-analyzer.py
 │   ├── xmind-analyzer.py
 │   └── run_analysis.sh
@@ -192,6 +224,16 @@ bie-zheng-luan-prototype/
 - 前端：商品展示组件、购物车组件、评价组件
 - 后端：商品查询接口、购物车接口、下单接口
 - 数据库：products表、categories表、orders表
+
+### 示例3：业务流程分析（交互式模式）
+**输入**：本地HTML原型文件
+
+**输出包含**：
+- 业务流程顺序（页面流转图）
+- 每个页面的操作列表和执行条件
+- 状态流转规则（状态机图）
+- 关键字段和筛选维度
+- 需要用户确认的问题清单
 
 ## 🛡️ 安全措施
 
@@ -244,6 +286,18 @@ bie-zheng-luan-prototype/
 
 ## 🔄 版本历史
 
+### v3.1.0 (2026-05-18)
+- ✅ 优化交互式分析：改进页面名称匹配（通过菜单page_id匹配view_id）
+- ✅ 过滤无效按钮（去重和过滤纯图标按钮）
+- ✅ 清理状态Tab名称（分离名称和数量）
+- ✅ 增强UI框架适配（新增scm-view容器模式）
+
+### v3.0.0 (2026-05-18)
+- ✅ **新增交互式业务分析功能**
+- ✅ 从原型推断业务流程和状态流转
+- ✅ 生成问题让用户确认，循环迭代直到理解完整业务逻辑
+- ✅ 新增BusinessFlowAnalyzer模块
+
 ### v2.9.2 (2026-04-29)
 - ✅ 增强文档透明度：补充脚本功能详细说明表格（网络访问、文件操作、安全措施）
 - ✅ 补充作者信息和项目链接在README顶部
@@ -271,7 +325,7 @@ bie-zheng-luan-prototype/
 - ✅ 补充状态筛选Tab、进度条组件解析
 
 ### v2.5.0 (2026-04-24)
-- ✅ 补充缺失解析模块：消息通知卡片、采购员进度卡片、页面标签栏
+- ✅ 补充缺失解析模块：消息通知卡片、人员进度卡片、页面标签栏
 - ✅ 优化表格层级识别和数据类型推断
 
 ### v2.4.0 (2026-04-24)
@@ -323,8 +377,8 @@ bie-zheng-luan-prototype/
 
 ## 📞 支持
 
-- 问题反馈：[GitHub Issues](https://github.com/[your-username]/bie-zheng-luan-prototype/issues)
-- 功能建议：[GitHub Discussions](https://github.com/[your-username]/bie-zheng-luan-prototype/discussions)
+- 问题反馈：[GitHub Issues](https://github.com/jermyn-zmj/bie-zheng-luan-prototype/issues)
+- 功能建议：[GitHub Discussions](https://github.com/jermyn-zmj/bie-zheng-luan-prototype/discussions)
 
 ---
 
